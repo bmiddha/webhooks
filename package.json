@@ -1,0 +1,40 @@
+{
+  "name": "webhooks-ts",
+  "version": "0.1.0",
+  "description": "",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepublish": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bmiddha/webhooks-ts.git"
+  },
+  "keywords": [],
+  "author": {
+    "name": "Bharat Middha",
+    "url": "https://bmiddha.com"
+  },
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/bmiddha/webhooks-ts/issues"
+  },
+  "homepage": "https://github.com/bmiddha/webhooks-ts#readme",
+  "devDependencies": {
+    "@types/ioredis": "^4.14.9",
+    "@types/node": "^13.9.5",
+    "@types/request-promise-native": "^1.0.17",
+    "@typescript-eslint/eslint-plugin": "^2.25.0",
+    "@typescript-eslint/parser": "^2.25.0",
+    "eslint": "^6.8.0",
+    "ts-node": "^8.8.1",
+    "typescript": "^3.8.3"
+  },
+  "dependencies": {
+    "ioredis": "^4.16.1",
+    "request": "^2.88.2",
+    "request-promise-native": "^1.0.8"
+  }
+}

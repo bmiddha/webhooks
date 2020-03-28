@@ -1,1 +1,4 @@
 node_modules
+dist/*
+!dist/Webhooks.d.ts
+!dist/Webhooks.js
