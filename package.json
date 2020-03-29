@@ -7,8 +7,7 @@
   "scripts": {
     "test": "nyc --reporter=lcov mocha -r ts-node/register src/tests/**/*.spec.ts",
     "build": "tsc",
-    "prepublishOnly": "npm run build",
-    "coverage": "codecov"
+    "prepublishOnly": "npm run build"
   },
   "repository": {
     "type": "git",
@@ -33,7 +32,6 @@
     "@typescript-eslint/eslint-plugin": "^2.25.0",
     "@typescript-eslint/parser": "^2.25.0",
     "chai": "^4.2.0",
-    "codecov": "^3.6.5",
     "eslint": "^6.8.0",
     "ioredis": "^4.16.1",
     "mocha": "^7.1.1",
