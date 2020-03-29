@@ -1,10 +1,10 @@
 import * as request from 'request-promise-native';
 import * as crypto from 'crypto';
+import { Redis } from 'ioredis';
 import { EventEmitter } from 'events';
-import * as Redis from 'ioredis';
 
 type Options = {
-    redisUri?: string;
+    redisClient?: Redis;
 };
 
 interface DB {
@@ -18,27 +18,26 @@ interface HashTable<T> {
 type RequestFunction = (shortName: string, jsonData: {}, headersData?: {}) => Promise<void>;
 
 export class WebHooks {
-    #redisClient: Redis.Redis;
+    #redisClient: Redis;
     #emitter: EventEmitter;
     #functions: HashTable<RequestFunction>;
-    constructor({ redisUri }: Options) {
-        this.#redisClient = new Redis(redisUri);
+    constructor({ redisClient }: Options) {
+        this.#redisClient = redisClient;
         this.#emitter = new EventEmitter();
         this.#functions = {};
         this.#setListeners();
     }
+    
     #setListeners = async () => {
         const keys = await this.#redisClient.keys('*');
-        await Promise.all(
-            keys.map(async key => {
-                const urls: string[] = JSON.parse(await this.#redisClient.get(key));
-                urls.forEach(url => {
-                    const encUrl = crypto.createHash('md5').update(url).digest('hex');
-                    this.#functions[encUrl] = this.#getRequestFunction(url);
-                    this.#emitter.on(key, this.#functions[encUrl]);
-                });
-            }),
-        );
+        keys.map(async (key: string) => {
+            const urls: string[] = JSON.parse(await this.#redisClient.get(key));
+            urls.forEach(url => {
+                const encUrl = crypto.createHash('md5').update(url).digest('hex');
+                this.#functions[encUrl] = this.#getRequestFunction(url);
+                this.#emitter.on(key, this.#functions[encUrl]);
+            });
+        });
     };
     #getRequestFunction = (url: string): RequestFunction => {
         return async (shortName: string, jsonData: {}, headersData?: {}): Promise<void> => {
@@ -56,7 +55,7 @@ export class WebHooks {
             });
             const { statusCode, body } = response;
             console.debug(`Request sent - Server responded with: ${statusCode}, ${body}`);
-            this.#emitter.emit(`${shortName}.success`, shortName, statusCode, body);
+            this.#emitter.emit(`${shortName}.status`, shortName, statusCode, body);
         };
     };
     #removeUrlFromShortName = async (shortName: string, url: string): Promise<void> => {
@@ -80,6 +79,9 @@ export class WebHooks {
             : [];
         if (urls.indexOf(url) === -1) {
             urls.push(url);
+            const encUrl = crypto.createHash('md5').update(url).digest('hex');
+            this.#functions[encUrl] = this.#getRequestFunction(url);
+            this.#emitter.on(shortName, this.#functions[encUrl]);
             await this.#redisClient.set(shortName, JSON.stringify(urls));
         } else {
             throw new Error(`URL(${url}) already exists for shortName(${shortName}).`);
@@ -106,7 +108,7 @@ export class WebHooks {
     getDB = async (): Promise<DB> => {
         const keys = await this.#redisClient.keys('*');
         const pairs = await Promise.all(
-            keys.map(async key => {
+            keys.map(async (key: string) => {
                 const urls = JSON.parse(await this.#redisClient.get(key));
                 return [key, urls];
             }),

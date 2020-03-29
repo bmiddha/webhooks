@@ -137,4 +137,4 @@ class WebHooks {
 exports.WebHooks = WebHooks;
 _redisClient = new WeakMap(), _emitter = new WeakMap(), _functions = new WeakMap(), _setListeners = new WeakMap(), _getRequestFunction = new WeakMap(), _removeUrlFromShortName = new WeakMap(), _removeShortName = new WeakMap();
 exports.default = WebHooks;
-//# sourceMappingURL=WebHooks.js.map
+//# sourceMappingURL=index.js.map

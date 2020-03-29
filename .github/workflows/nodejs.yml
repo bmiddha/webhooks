@@ -10,12 +10,11 @@ jobs:
         node-version: [10.x, 12.x, 13.x]
     steps:
     - uses: actions/checkout@v2
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v1
+    - uses: actions/setup-node@v1
       with:
-        node-version: ${{ matrix.node-version }}
-    - name: npm install, build, test
-      run: |
-        npm install
-        npm run build
-        npm run test
+        node-version: '13.x'
+    - run: npm install
+    - run: npm run build
+    - run: |
+        docker run -d -p 6379:6379 redis
+        npm test
