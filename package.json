@@ -1,5 +1,5 @@
 {
-  "name": "webhooks-ts",
+  "name": "@bmiddha/webhooks",
   "version": "0.1.0",
   "description": "",
   "main": "dist/index.js",
@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bmiddha/webhooks-ts.git"
+    "url": "git+https://github.com/bmiddha/webhooks.git"
   },
   "keywords": [],
   "author": {
@@ -20,9 +20,9 @@
   },
   "license": "GPL-3.0",
   "bugs": {
-    "url": "https://github.com/bmiddha/webhooks-ts/issues"
+    "url": "https://github.com/bmiddha/webhooks/issues"
   },
-  "homepage": "https://github.com/bmiddha/webhooks-ts#readme",
+  "homepage": "https://github.com/bmiddha/webhooks#readme",
   "devDependencies": {
     "@types/chai": "^4.2.11",
     "@types/ioredis": "^4.14.9",

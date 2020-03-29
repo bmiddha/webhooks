@@ -44,9 +44,12 @@ describe('WebHooks Test', () => {
     it('should return response on call', async function () {
         this.timeout(10);
         await webHooks.add('test3', `${basePath}/test33/123`);
-        webHooks.emitter.addListener('test3.status', (shortName: string, status: number, body: string) => {
-            expect(body).to.equal('OK');
-        });
+        webHooks.emitter.addListener(
+            'test3.status',
+            (shortName: string, status: number, body: string) => {
+                expect(body).to.equal('OK');
+            },
+        );
         webHooks.trigger('test3', { data: 123123123 });
     });
 });
