@@ -54,7 +54,6 @@ export class WebHooks {
                 resolveWithFullResponse: true,
             });
             const { statusCode, body } = response;
-            console.debug(`Request sent - Server responded with: ${statusCode}, ${body}`);
             this.#emitter.emit(`${shortName}.status`, shortName, statusCode, body);
         };
     };
@@ -102,7 +101,7 @@ export class WebHooks {
                 const urlKey = crypto.createHash('md5').update(url).digest('hex');
                 delete this.#functions[urlKey];
             });
-            this.#removeShortName(shortName);
+            await this.#removeShortName(shortName);
         }
     };
     getDB = async (): Promise<DB> => {
