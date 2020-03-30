@@ -10,16 +10,61 @@ interface DB {
 interface HashTable<T> {
     [key: string]: T;
 }
-declare type RequestFunction = (shortName: string, jsonData: {}, headersData?: {}) => Promise<void>;
+declare type RequestFunction = (name: string, jsonData: {}, headersData?: {}) => Promise<void>;
 export declare class WebHooks {
     #private;
     constructor({ redisClient }: Options);
-    trigger: (shortName: string, jsonData: {}, headersData?: {}) => boolean;
-    add: (shortName: string, url: string) => Promise<void>;
-    remove: (shortName: string, url?: string) => Promise<void>;
+    /**
+     * @param  {string} name
+     * @param  {Object} jsonData
+     * @param  {Object} headersData?
+     * @returns boolean
+     */
+    trigger: (name: string, jsonData: {}, headersData?: {}) => boolean;
+    /**
+     * Add WebHook to name.
+     *
+     * @param  {string} name
+     * @param  {string} url
+     */
+    add: (name: string, url: string) => Promise<void>;
+    /**
+     * Remove URL from specified name. If no URL is specified, then remove name from Database.
+     *
+     * @param  {string} name
+     * @param  {string} url?
+     */
+    remove: (name: string, url?: string) => Promise<void>;
+    /**
+     * Return all names, and URL arrays.
+     *
+     * @returns Promise
+     */
     getDB: () => Promise<DB>;
-    getWebHook: (shortName: string) => Promise<string>;
-    get listener(): HashTable<RequestFunction>;
+    /**
+     * Return array of URLs for specified name.
+     *
+     * @param  {string} name
+     * @returns Promise
+     */
+    getWebHook: (name: string) => Promise<string>;
+    /**
+     * Return array of URLs for specified name.
+     *
+     * @param  {string} name
+     * @returns Promise
+     */
+    /**
+     * Return all request functions hash table
+     *
+     * @returns HashTable
+     */
+    get requestFunctions(): HashTable<RequestFunction>;
+    /**
+     * Return EventEmitter instance.
+     *
+     * @returns EventEmitter
+     */
     get emitter(): EventEmitter;
 }
 export default WebHooks;

@@ -21,7 +21,7 @@ var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (
     }
     return privateMap.get(receiver);
 };
-var _redisClient, _emitter, _functions, _setListeners, _getRequestFunction, _removeUrlFromShortName, _removeShortName;
+var _redisClient, _emitter, _requestFunctions, _setListeners, _getRequestFunction, _removeUrlFromName, _removeName;
 Object.defineProperty(exports, "__esModule", { value: true });
 const request = require("request-promise-native");
 const crypto = require("crypto");
@@ -30,85 +30,104 @@ class WebHooks {
     constructor({ redisClient }) {
         _redisClient.set(this, void 0);
         _emitter.set(this, void 0);
-        _functions.set(this, void 0);
+        _requestFunctions.set(this, void 0);
         _setListeners.set(this, () => __awaiter(this, void 0, void 0, function* () {
             const keys = yield __classPrivateFieldGet(this, _redisClient).keys('*');
             keys.map((key) => __awaiter(this, void 0, void 0, function* () {
                 const urls = JSON.parse(yield __classPrivateFieldGet(this, _redisClient).get(key));
                 urls.forEach(url => {
                     const encUrl = crypto.createHash('md5').update(url).digest('hex');
-                    __classPrivateFieldGet(this, _functions)[encUrl] = __classPrivateFieldGet(this, _getRequestFunction).call(this, url);
-                    __classPrivateFieldGet(this, _emitter).on(key, __classPrivateFieldGet(this, _functions)[encUrl]);
+                    __classPrivateFieldGet(this, _requestFunctions)[encUrl] = __classPrivateFieldGet(this, _getRequestFunction).call(this, url);
+                    __classPrivateFieldGet(this, _emitter).on(key, __classPrivateFieldGet(this, _requestFunctions)[encUrl]);
                 });
             }));
         }));
         _getRequestFunction.set(this, (url) => {
-            return (shortName, jsonData, headersData) => __awaiter(this, void 0, void 0, function* () {
-                const headers = Object.assign(Object.assign({}, headersData), { 'Content-Type': 'application/json' });
-                const response = yield request({
+            return (name, jsonData, headersData) => __awaiter(this, void 0, void 0, function* () {
+                /* istanbul ignore next */
+                const { statusCode, body } = yield request({
                     method: 'POST',
                     uri: url,
                     strictSSL: false,
-                    headers: headers,
+                    headers: Object.assign(Object.assign({}, headersData), { 'Content-Type': 'application/json' }),
                     body: JSON.stringify(jsonData),
                     resolveWithFullResponse: true,
                 });
-                const { statusCode, body } = response;
-                console.debug(`Request sent - Server responded with: ${statusCode}, ${body}`);
-                __classPrivateFieldGet(this, _emitter).emit(`${shortName}.status`, shortName, statusCode, body);
+                /* istanbul ignore next */
+                __classPrivateFieldGet(this, _emitter).emit(`${name}.status`, name, statusCode, body);
             });
         });
-        _removeUrlFromShortName.set(this, (shortName, url) => __awaiter(this, void 0, void 0, function* () {
-            const urls = JSON.parse(yield __classPrivateFieldGet(this, _redisClient).get(shortName));
+        _removeUrlFromName.set(this, (name, url) => __awaiter(this, void 0, void 0, function* () {
+            const urls = JSON.parse(yield __classPrivateFieldGet(this, _redisClient).get(name));
             if (urls.indexOf(url) !== -1) {
                 urls.splice(urls.indexOf(url), 1);
-                yield __classPrivateFieldGet(this, _redisClient).set(shortName, JSON.stringify(urls));
+                yield __classPrivateFieldGet(this, _redisClient).set(name, JSON.stringify(urls));
             }
             else {
-                throw new Error(`URL(${url}) not found wile removing from ShortName(${shortName}).`);
+                throw new Error(`URL(${url}) not found wile removing from Name(${name}).`);
             }
         }));
-        _removeShortName.set(this, (shortName) => __awaiter(this, void 0, void 0, function* () {
-            if (yield __classPrivateFieldGet(this, _redisClient).exists(shortName))
-                yield __classPrivateFieldGet(this, _redisClient).unlink(shortName);
-            else
-                throw new Error(`ShortName(${shortName}) not found while removing ShortName.`);
+        _removeName.set(this, (name) => __awaiter(this, void 0, void 0, function* () {
+            yield __classPrivateFieldGet(this, _redisClient).unlink(name);
         }));
-        this.trigger = (shortName, jsonData, headersData) => __classPrivateFieldGet(this, _emitter).emit(shortName, shortName, jsonData, headersData);
-        this.add = (shortName, url) => __awaiter(this, void 0, void 0, function* () {
-            const urls = (yield __classPrivateFieldGet(this, _redisClient).exists(shortName))
-                ? JSON.parse(yield __classPrivateFieldGet(this, _redisClient).get(shortName))
+        /**
+         * @param  {string} name
+         * @param  {Object} jsonData
+         * @param  {Object} headersData?
+         * @returns boolean
+         */
+        this.trigger = (name, jsonData, headersData) => __classPrivateFieldGet(this, _emitter).emit(name, name, jsonData, headersData);
+        /**
+         * Add WebHook to name.
+         *
+         * @param  {string} name
+         * @param  {string} url
+         */
+        this.add = (name, url) => __awaiter(this, void 0, void 0, function* () {
+            const urls = (yield __classPrivateFieldGet(this, _redisClient).exists(name))
+                ? JSON.parse(yield __classPrivateFieldGet(this, _redisClient).get(name))
                 : [];
             if (urls.indexOf(url) === -1) {
                 urls.push(url);
                 const encUrl = crypto.createHash('md5').update(url).digest('hex');
-                __classPrivateFieldGet(this, _functions)[encUrl] = __classPrivateFieldGet(this, _getRequestFunction).call(this, url);
-                __classPrivateFieldGet(this, _emitter).on(shortName, __classPrivateFieldGet(this, _functions)[encUrl]);
-                yield __classPrivateFieldGet(this, _redisClient).set(shortName, JSON.stringify(urls));
+                __classPrivateFieldGet(this, _requestFunctions)[encUrl] = __classPrivateFieldGet(this, _getRequestFunction).call(this, url);
+                __classPrivateFieldGet(this, _emitter).on(name, __classPrivateFieldGet(this, _requestFunctions)[encUrl]);
+                yield __classPrivateFieldGet(this, _redisClient).set(name, JSON.stringify(urls));
             }
             else {
-                throw new Error(`URL(${url}) already exists for shortName(${shortName}).`);
+                throw new Error(`URL(${url}) already exists for name(${name}).`);
             }
         });
-        this.remove = (shortName, url) => __awaiter(this, void 0, void 0, function* () {
+        /**
+         * Remove URL from specified name. If no URL is specified, then remove name from Database.
+         *
+         * @param  {string} name
+         * @param  {string} url?
+         */
+        this.remove = (name, url) => __awaiter(this, void 0, void 0, function* () {
+            if (!(yield __classPrivateFieldGet(this, _redisClient).exists(name)))
+                throw new Error(`Name(${name}) not found while removing.`);
             if (url) {
-                yield __classPrivateFieldGet(this, _removeUrlFromShortName).call(this, shortName, url);
+                yield __classPrivateFieldGet(this, _removeUrlFromName).call(this, name, url);
                 const urlKey = crypto.createHash('md5').update(url).digest('hex');
-                __classPrivateFieldGet(this, _emitter).removeListener(shortName, __classPrivateFieldGet(this, _functions)[urlKey]);
-                delete __classPrivateFieldGet(this, _functions)[urlKey];
+                __classPrivateFieldGet(this, _emitter).removeListener(name, __classPrivateFieldGet(this, _requestFunctions)[urlKey]);
+                delete __classPrivateFieldGet(this, _requestFunctions)[urlKey];
             }
             else {
-                if (!(yield __classPrivateFieldGet(this, _redisClient).exists(shortName)))
-                    throw new Error(`ShortName(${shortName}) not found while removing.`);
-                __classPrivateFieldGet(this, _emitter).removeAllListeners(shortName);
-                const urls = JSON.parse(yield __classPrivateFieldGet(this, _redisClient).get(shortName));
+                __classPrivateFieldGet(this, _emitter).removeAllListeners(name);
+                const urls = JSON.parse(yield __classPrivateFieldGet(this, _redisClient).get(name));
                 urls.forEach(url => {
                     const urlKey = crypto.createHash('md5').update(url).digest('hex');
-                    delete __classPrivateFieldGet(this, _functions)[urlKey];
+                    delete __classPrivateFieldGet(this, _requestFunctions)[urlKey];
                 });
-                __classPrivateFieldGet(this, _removeShortName).call(this, shortName);
+                yield __classPrivateFieldGet(this, _removeName).call(this, name);
             }
         });
+        /**
+         * Return all names, and URL arrays.
+         *
+         * @returns Promise
+         */
         this.getDB = () => __awaiter(this, void 0, void 0, function* () {
             const keys = yield __classPrivateFieldGet(this, _redisClient).keys('*');
             const pairs = yield Promise.all(keys.map((key) => __awaiter(this, void 0, void 0, function* () {
@@ -117,24 +136,46 @@ class WebHooks {
             })));
             return Object.fromEntries(pairs);
         });
-        this.getWebHook = (shortName) => __awaiter(this, void 0, void 0, function* () {
-            if (!(yield __classPrivateFieldGet(this, _redisClient).exists(shortName)))
-                throw new Error(`ShortName(${shortName}) not found while removing.`);
-            return yield __classPrivateFieldGet(this, _redisClient).get(shortName);
+        /**
+         * Return array of URLs for specified name.
+         *
+         * @param  {string} name
+         * @returns Promise
+         */
+        this.getWebHook = (name) => __awaiter(this, void 0, void 0, function* () {
+            if (!(yield __classPrivateFieldGet(this, _redisClient).exists(name)))
+                throw new Error(`Name(${name}) not found while getWebHook.`);
+            return yield __classPrivateFieldGet(this, _redisClient).get(name);
         });
         __classPrivateFieldSet(this, _redisClient, redisClient);
         __classPrivateFieldSet(this, _emitter, new events_1.EventEmitter());
-        __classPrivateFieldSet(this, _functions, {});
+        __classPrivateFieldSet(this, _requestFunctions, {});
         __classPrivateFieldGet(this, _setListeners).call(this);
     }
-    get listener() {
-        return __classPrivateFieldGet(this, _functions);
+    /**
+     * Return array of URLs for specified name.
+     *
+     * @param  {string} name
+     * @returns Promise
+     */
+    /**
+     * Return all request functions hash table
+     *
+     * @returns HashTable
+     */
+    get requestFunctions() {
+        return __classPrivateFieldGet(this, _requestFunctions);
     }
+    /**
+     * Return EventEmitter instance.
+     *
+     * @returns EventEmitter
+     */
     get emitter() {
         return __classPrivateFieldGet(this, _emitter);
     }
 }
 exports.WebHooks = WebHooks;
-_redisClient = new WeakMap(), _emitter = new WeakMap(), _functions = new WeakMap(), _setListeners = new WeakMap(), _getRequestFunction = new WeakMap(), _removeUrlFromShortName = new WeakMap(), _removeShortName = new WeakMap();
+_redisClient = new WeakMap(), _emitter = new WeakMap(), _requestFunctions = new WeakMap(), _setListeners = new WeakMap(), _getRequestFunction = new WeakMap(), _removeUrlFromName = new WeakMap(), _removeName = new WeakMap();
 exports.default = WebHooks;
 //# sourceMappingURL=index.js.map
