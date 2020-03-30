@@ -27,7 +27,7 @@ export class WebHooks {
         this.#requestFunctions = {};
         this.#setListeners();
     }
-    
+
     #setListeners = async () => {
         const keys = await this.#redisClient.keys('*');
         keys.map(async (key: string) => {
@@ -41,19 +41,19 @@ export class WebHooks {
     };
     #getRequestFunction = (url: string): RequestFunction => {
         return async (shortName: string, jsonData: {}, headersData?: {}): Promise<void> => {
-            const headers = {
-                ...headersData,
-                'Content-Type': 'application/json',
-            };
-            const response = await request({
+            /* istanbul ignore next */
+            const { statusCode, body } = await request({
                 method: 'POST',
                 uri: url,
                 strictSSL: false,
-                headers: headers,
+                headers: {
+                    ...headersData,
+                    'Content-Type': 'application/json',
+                },
                 body: JSON.stringify(jsonData),
                 resolveWithFullResponse: true,
             });
-            const { statusCode, body } = response;
+            /* istanbul ignore next */
             this.#emitter.emit(`${shortName}.status`, shortName, statusCode, body);
         };
     };
@@ -67,8 +67,7 @@ export class WebHooks {
         }
     };
     #removeShortName = async (shortName: string): Promise<void> => {
-        if (await this.#redisClient.exists(shortName)) await this.#redisClient.unlink(shortName);
-        else throw new Error(`ShortName(${shortName}) not found while removing ShortName.`);
+        await this.#redisClient.unlink(shortName);
     };
     trigger = (shortName: string, jsonData: {}, headersData?: {}): boolean =>
         this.#emitter.emit(shortName, shortName, jsonData, headersData);
@@ -87,14 +86,14 @@ export class WebHooks {
         }
     };
     remove = async (shortName: string, url?: string): Promise<void> => {
+        if (!(await this.#redisClient.exists(shortName)))
+            throw new Error(`ShortName(${shortName}) not found while removing.`);
         if (url) {
             await this.#removeUrlFromShortName(shortName, url);
             const urlKey = crypto.createHash('md5').update(url).digest('hex');
             this.#emitter.removeListener(shortName, this.#requestFunctions[urlKey]);
             delete this.#requestFunctions[urlKey];
         } else {
-            if (!(await this.#redisClient.exists(shortName)))
-                throw new Error(`ShortName(${shortName}) not found while removing.`);
             this.#emitter.removeAllListeners(shortName);
             const urls: string[] = JSON.parse(await this.#redisClient.get(shortName));
             urls.forEach(url => {
@@ -116,7 +115,7 @@ export class WebHooks {
     };
     getWebHook = async (shortName: string): Promise<string> => {
         if (!(await this.#redisClient.exists(shortName)))
-            throw new Error(`ShortName(${shortName}) not found while removing.`);
+            throw new Error(`ShortName(${shortName}) not found while getWebHook.`);
         return await this.#redisClient.get(shortName);
     };
     get requestFunctions(): HashTable<RequestFunction> {

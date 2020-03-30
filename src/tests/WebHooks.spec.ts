@@ -63,13 +63,42 @@ describe('WebHooks Test', () => {
         const truth = urls.map(url => `${baseUrl}${url}`);
         redisClient.set(shortName, JSON.stringify(truth));
         const webHooks = new WebHooks({ redisClient });
-        await webHooks.remove(shortName, truth.pop());
+        const removedUrl = truth.pop();
+        await webHooks.remove(shortName, removedUrl);
         await webHooks.remove(shortName, truth.pop());
         const dbValue = JSON.parse(await redisClient.get(shortName));
         assert.deepEqual(dbValue, truth);
+        try {
+            await webHooks.remove(shortName, removedUrl);
+            assert.fail();
+        } catch (e) {
+            assert.equal(
+                e.message,
+                `URL(${removedUrl}) not found wile removing from ShortName(${shortName}).`,
+            );
+        }
         await webHooks.remove(shortName);
         const dbExists = await redisClient.exists(shortName);
         assert.equal(dbExists, 0);
+        try {
+            await webHooks.remove(shortName);
+            assert.fail();
+        } catch (e) {
+            assert.equal(e.message, `ShortName(${shortName}) not found while removing.`);
+        }
+        const badShortName = 'testRemove-bad';
+        try {
+            await webHooks.remove(badShortName, removedUrl);
+            assert.fail();
+        } catch (e) {
+            assert.equal(e.message, `ShortName(${badShortName}) not found while removing.`);
+        }
+        try {
+            await webHooks.remove(badShortName);
+            assert.fail();
+        } catch (e) {
+            assert.equal(e.message, `ShortName(${badShortName}) not found while removing.`);
+        }
     });
 
     it('test add', async () => {
@@ -82,6 +111,12 @@ describe('WebHooks Test', () => {
         }
         const dbValue = JSON.parse(await redisClient.get(shortName));
         assert.deepEqual(dbValue, truth);
+        try {
+            await webHooks.add(shortName, truth[0]);
+            assert.fail();
+        } catch (e) {
+            assert.equal(e.message, `URL(${truth[0]}) already exists for shortName(${shortName}).`);
+        }
     });
 
     it('test getWebHook', async () => {
@@ -92,6 +127,19 @@ describe('WebHooks Test', () => {
         const webHooks = new WebHooks({ redisClient });
         const getWebHookResponse = JSON.parse(await webHooks.getWebHook(shortName));
         assert.deepEqual(getWebHookResponse, truth);
+        const badShortName = 'testGetWebHook-bad';
+        try {
+            await webHooks.getWebHook(badShortName);
+            assert.fail();
+        } catch (e) {
+            assert.equal(e.message, `ShortName(${badShortName}) not found while getWebHook.`);
+        }
+    });
+
+    it('test get requestFunctions', () => {
+        const webHooks = new WebHooks({ redisClient });
+        const { requestFunctions } = webHooks;
+        assert.typeOf(requestFunctions, 'object');
     });
 
     it('test getDB', async () => {
@@ -117,7 +165,7 @@ describe('WebHooks Test', () => {
         assert.deepEqual(val, db);
     });
 
-    it('test trigger', async function() {
+    it('test trigger', async function () {
         this.timeout(100);
         const data = { data: 123123123 };
         const body = JSON.stringify(data);
