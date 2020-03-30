@@ -19,3 +19,4 @@ jobs:
         run: |
           docker run -d -p 6379:6379 redis
           npm test
+      - uses: codecov/codecov-action@v1
