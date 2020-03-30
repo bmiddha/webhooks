@@ -51,7 +51,7 @@ describe('WebHooks Test', () => {
     });
 
     it('test remove', async () => {
-        const shortName = 'testRemove';
+        const name = 'testRemove';
         const urls = [
             '/testRemove/123',
             '/testRemove/1235',
@@ -61,78 +61,78 @@ describe('WebHooks Test', () => {
             '/testRemove/12369',
         ];
         const truth = urls.map(url => `${baseUrl}${url}`);
-        redisClient.set(shortName, JSON.stringify(truth));
+        redisClient.set(name, JSON.stringify(truth));
         const webHooks = new WebHooks({ redisClient });
         const removedUrl = truth.pop();
-        await webHooks.remove(shortName, removedUrl);
-        await webHooks.remove(shortName, truth.pop());
-        const dbValue = JSON.parse(await redisClient.get(shortName));
+        await webHooks.remove(name, removedUrl);
+        await webHooks.remove(name, truth.pop());
+        const dbValue = JSON.parse(await redisClient.get(name));
         assert.deepEqual(dbValue, truth);
         try {
-            await webHooks.remove(shortName, removedUrl);
+            await webHooks.remove(name, removedUrl);
             assert.fail();
         } catch (e) {
             assert.equal(
                 e.message,
-                `URL(${removedUrl}) not found wile removing from ShortName(${shortName}).`,
+                `URL(${removedUrl}) not found wile removing from Name(${name}).`,
             );
         }
-        await webHooks.remove(shortName);
-        const dbExists = await redisClient.exists(shortName);
+        await webHooks.remove(name);
+        const dbExists = await redisClient.exists(name);
         assert.equal(dbExists, 0);
         try {
-            await webHooks.remove(shortName);
+            await webHooks.remove(name);
             assert.fail();
         } catch (e) {
-            assert.equal(e.message, `ShortName(${shortName}) not found while removing.`);
+            assert.equal(e.message, `Name(${name}) not found while removing.`);
         }
-        const badShortName = 'testRemove-bad';
+        const badName = 'testRemove-bad';
         try {
-            await webHooks.remove(badShortName, removedUrl);
+            await webHooks.remove(badName, removedUrl);
             assert.fail();
         } catch (e) {
-            assert.equal(e.message, `ShortName(${badShortName}) not found while removing.`);
+            assert.equal(e.message, `Name(${badName}) not found while removing.`);
         }
         try {
-            await webHooks.remove(badShortName);
+            await webHooks.remove(badName);
             assert.fail();
         } catch (e) {
-            assert.equal(e.message, `ShortName(${badShortName}) not found while removing.`);
+            assert.equal(e.message, `Name(${badName}) not found while removing.`);
         }
     });
 
     it('test add', async () => {
         const webHooks = new WebHooks({ redisClient });
-        const shortName = 'testAdd';
+        const name = 'testAdd';
         const urls = ['/testAdd/123', '/testAdd/1235', '/testAdd/1236'];
         const truth = urls.map(url => `${baseUrl}${url}`);
         for (const i in truth) {
-            await webHooks.add(shortName, truth[i]);
+            await webHooks.add(name, truth[i]);
         }
-        const dbValue = JSON.parse(await redisClient.get(shortName));
+        const dbValue = JSON.parse(await redisClient.get(name));
         assert.deepEqual(dbValue, truth);
         try {
-            await webHooks.add(shortName, truth[0]);
+            await webHooks.add(name, truth[0]);
             assert.fail();
         } catch (e) {
-            assert.equal(e.message, `URL(${truth[0]}) already exists for shortName(${shortName}).`);
+            assert.equal(e.message, `URL(${truth[0]}) already exists for name(${name}).`);
         }
     });
 
     it('test getWebHook', async () => {
-        const shortName = 'testGetWebHook';
+        const name = 'testGetWebHook';
         const urls = ['/testGetWebHook/123', '/testGetWebHook/1235', '/testGetWebHook/1236'];
         const truth = urls.map(url => `${baseUrl}${url}`);
-        redisClient.set(shortName, JSON.stringify(truth));
+        redisClient.set(name, JSON.stringify(truth));
         const webHooks = new WebHooks({ redisClient });
-        const getWebHookResponse = JSON.parse(await webHooks.getWebHook(shortName));
+        const getWebHookResponse = JSON.parse(await webHooks.getWebHook(name));
         assert.deepEqual(getWebHookResponse, truth);
-        const badShortName = 'testGetWebHook-bad';
+        const badName = 'testGetWebHook-bad';
         try {
-            await webHooks.getWebHook(badShortName);
+            await webHooks.getWebHook(badName);
             assert.fail();
         } catch (e) {
-            assert.equal(e.message, `ShortName(${badShortName}) not found while getWebHook.`);
+            assert.equal(e.message, `Name(${badName}) not found while getWebHook.`);
         }
     });
 
@@ -173,15 +173,15 @@ describe('WebHooks Test', () => {
         const headerData = {
             custom: 'data',
         };
-        const shortName = 'testTrigger';
+        const name = 'testTrigger';
         const url = '/testTrigger/123';
-        await redisClient.set(shortName, JSON.stringify([`${baseUrl}${url}`]));
+        await redisClient.set(name, JSON.stringify([`${baseUrl}${url}`]));
         const webHooks = new WebHooks({ redisClient });
         webHooks.emitter.addListener(
-            `${shortName}.status`,
-            (shortNameReceived: string, statusReceived: number, bodyReceived: string) => {
+            `${name}.status`,
+            (nameReceived: string, statusReceived: number, bodyReceived: string) => {
                 assert.equal(statusReceived, status);
-                assert.equal(shortNameReceived, shortName);
+                assert.equal(nameReceived, name);
                 assert.equal(
                     bodyReceived,
                     JSON.stringify({
@@ -199,6 +199,6 @@ describe('WebHooks Test', () => {
                 );
             },
         );
-        webHooks.trigger(shortName, data, headerData);
+        webHooks.trigger(name, data, headerData);
     });
 });
