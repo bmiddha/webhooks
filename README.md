@@ -27,10 +27,10 @@ npm install --save @bmiddha/webhooks
 
 | Name        | Type     | Required |
 | ----------- | -------- | -------- |
-| `name` | `string` | `true`   |
+| `name`      | `string` | `true`   |
 | `url`       | `string` | `true`   |
 
-### Return: `void`
+#### Return: `void`
 
 Add WebHook to database.
 
@@ -40,10 +40,10 @@ Add WebHook to database.
 
 | Name        | Type     | Required |
 | ----------- | -------- | -------- |
-| `name` | `string` | `true`   |
+| `name`      | `string` | `true`   |
 | `url`       | `string` | `false`  |
 
-### Return: `void`
+#### Return: `void`
 
 ### `trigger(name, data, headers)` - Trigger WebHook
 
@@ -51,11 +51,11 @@ Add WebHook to database.
 
 | Name        | Type     | Required |
 | ----------- | -------- | -------- |
-| `name` | `string` | `true`   |
+| `name`      | `string` | `true`   |
 | `data`      | `JSON`   | `true`   |
 | `headers`   | `JSON`   | `false`  |
 
-#### Return: `boolean`
+#### Return: `void`
 
 Event emission return value
 
@@ -84,15 +84,15 @@ All names, and URLs.
 
 | Name        | Type     | Required |
 | ----------- | -------- | -------- |
-| `name` | `string` | `true`   |
+| `name`      | `string` | `true`   |
 
 ### `requestFunctions()` - Get Request Functions
 
-### Return: `Array<(name: string, jsonData: {}, headersData?: {})>`
+#### Return: `(name: string, jsonData: {}, headersData?: {}) => Promise<void>[]`
 
 ### `emitter()` - Get Event Emitter
 
-### Return: `events.EventEmitter`
+#### Return: `events.EventEmitter`
 
 ## Example
 

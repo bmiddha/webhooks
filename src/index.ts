@@ -18,7 +18,6 @@ interface HashTable<T> {
 type RequestFunction = (name: string, jsonData: {}, headersData?: {}) => Promise<void>;
 
 export class WebHooks {
-
     #redisClient: Redis;
     #emitter: EventEmitter;
     #requestFunctions: HashTable<RequestFunction>;
@@ -78,16 +77,17 @@ export class WebHooks {
      * @param  {string} name
      * @param  {Object} jsonData
      * @param  {Object} headersData?
-     * @returns boolean
      */
-    trigger = (name: string, jsonData: {}, headersData?: {}): boolean =>
+    trigger = (name: string, jsonData: {}, headersData?: {}) => {
         this.#emitter.emit(name, name, jsonData, headersData);
-        /**
-         * Add WebHook to name.
-         * 
-         * @param  {string} name
-         * @param  {string} url
-         */
+    }
+
+    /**
+     * Add WebHook to name.
+     *
+     * @param  {string} name
+     * @param  {string} url
+     */
     add = async (name: string, url: string): Promise<void> => {
         const urls = (await this.#redisClient.exists(name))
             ? JSON.parse(await this.#redisClient.get(name))
@@ -102,10 +102,10 @@ export class WebHooks {
             throw new Error(`URL(${url}) already exists for name(${name}).`);
         }
     };
-    
+
     /**
      * Remove URL from specified name. If no URL is specified, then remove name from Database.
-     * 
+     *
      * @param  {string} name
      * @param  {string} url?
      */
@@ -127,10 +127,10 @@ export class WebHooks {
             await this.#removeName(name);
         }
     };
-    
+
     /**
      * Return all names, and URL arrays.
-     * 
+     *
      * @returns Promise
      */
     getDB = async (): Promise<DB> => {
@@ -143,10 +143,10 @@ export class WebHooks {
         );
         return Object.fromEntries(pairs);
     };
-    
+
     /**
      * Return array of URLs for specified name.
-     * 
+     *
      * @param  {string} name
      * @returns Promise
      */
@@ -155,17 +155,17 @@ export class WebHooks {
             throw new Error(`Name(${name}) not found while getWebHook.`);
         return await this.#redisClient.get(name);
     };
-    
+
     /**
      * Return array of URLs for specified name.
-     * 
+     *
      * @param  {string} name
      * @returns Promise
      */
 
     /**
      * Return all request functions hash table
-     * 
+     *
      * @returns HashTable
      */
     get requestFunctions(): HashTable<RequestFunction> {
@@ -174,7 +174,7 @@ export class WebHooks {
 
     /**
      * Return EventEmitter instance.
-     * 
+     *
      * @returns EventEmitter
      */
     get emitter(): EventEmitter {
