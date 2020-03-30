@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "test": "nyc --reporter=lcov mocha -r ts-node/register src/tests/**/*.spec.ts",
+    "test": "nyc --reporter=lcov --reporter=text mocha -r ts-node/register src/tests/**/*.spec.ts",
     "build": "tsc",
     "prepublishOnly": "npm run build"
   },
