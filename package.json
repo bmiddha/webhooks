@@ -1,7 +1,7 @@
 {
   "name": "@bmiddha/webhooks",
-  "version": "1.0.0",
-  "description": "",
+  "version": "1.0.1",
+  "description": "Easy-to-use, object oriented WebHooks library written in TypeScript.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -13,7 +13,7 @@
     "type": "git",
     "url": "git+https://github.com/bmiddha/webhooks.git"
   },
-  "keywords": [],
+  "keywords": ["typescript", "webhooks", "webhooks", "callback", "http", "redis", "ioredis", "types"],
   "author": {
     "name": "Bharat Middha",
     "url": "https://bmiddha.com"
