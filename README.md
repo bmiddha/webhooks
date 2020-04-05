@@ -101,16 +101,9 @@ import * as Redis from 'ioredis';
 import WebHooks from '@bmiddha/webhooks';
 
 const redisClient = new Redis();
-
 const webHooks = new WebHooks({ redisClient });
 
 webHooks.add('webHookName', 'http://localhost:8080/hook')
-import * as Redis from "ioredis";
-import WebHooks from "@bmiddha/webhooks";
-
-const redisClient = new Redis();
-
-const webHooks = new WebHooks({ redisClient });
 
 const demo = async () => {
     await webHooks.add("webHookName", "http://localhost:8080/hook");

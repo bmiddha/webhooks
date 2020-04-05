@@ -6,8 +6,16 @@ import * as http from 'http';
 
 const { assert } = chai;
 
+
 describe('WebHooks Test', () => {
     const redisClient = new Redis('redis://localhost');
+
+    redisClient.on('error', async () => {
+        console.error('Redis Error');
+        await redisClient.quit();
+        process.exit(1);
+    });
+
     const unlinkAllKeys = async () => {
         const keys = await redisClient.keys('*');
         await Promise.all(keys.map(key => redisClient.unlink(key)));
@@ -34,12 +42,21 @@ describe('WebHooks Test', () => {
     };
 
     const server = http.createServer(requestHandler);
-    const port = 8888;
+    let port: number;
     const protocol = 'http';
-    const host = `localhost:${port}`;
-    const baseUrl = `${protocol}://${host}`;
+    let host: string;
+    let baseUrl: string;
     before(async () => {
-        server.listen(port);
+        server.listen(0);
+        port = await new Promise(resolve => {
+            server.on('listening', () => {
+                const addressInfo = server.address().valueOf() as
+                    { address: string; family: string; port: number };
+                resolve(addressInfo.port);
+            });
+        });
+        host = `localhost:${port}`;
+        baseUrl = `${protocol}://${host}`;
         await unlinkAllKeys();
     });
     afterEach(async () => {
@@ -74,7 +91,7 @@ describe('WebHooks Test', () => {
         } catch (e) {
             assert.equal(
                 e.message,
-                `URL(${removedUrl}) not found wile removing from Name(${name}).`,
+                `URL(${removedUrl}) not found wile removing from Name(${name}).`
             );
         }
         await webHooks.remove(name);
@@ -166,7 +183,6 @@ describe('WebHooks Test', () => {
     });
 
     it('test trigger', async function () {
-        this.timeout(100);
         const data = { data: 123123123 };
         const body = JSON.stringify(data);
         const status = 200;
@@ -176,29 +192,33 @@ describe('WebHooks Test', () => {
         const name = 'testTrigger';
         const url = '/testTrigger/123';
         await redisClient.set(name, JSON.stringify([`${baseUrl}${url}`]));
+
         const webHooks = new WebHooks({ redisClient });
-        webHooks.emitter.addListener(
-            `${name}.status`,
-            (nameReceived: string, statusReceived: number, bodyReceived: string) => {
-                assert.equal(statusReceived, status);
-                assert.equal(nameReceived, name);
-                assert.equal(
-                    bodyReceived,
-                    JSON.stringify({
-                        headers: {
-                            ...headerData,
-                            'content-type': 'application/json',
-                            host,
-                            'content-length': body.length.toString(),
-                            connection: 'close',
-                        },
-                        method: 'POST',
-                        url,
-                        body,
-                    }),
-                );
-            },
-        );
-        webHooks.trigger(name, data, headerData);
+        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => {
+            webHooks.emitter.on(`${name}.status`,
+                (nameReceived: string, statusReceived: number, bodyReceived: string) => {
+                    assert.equal(statusReceived, status);
+                    assert.equal(nameReceived, name);
+                    assert.equal(
+                        bodyReceived,
+                        JSON.stringify({
+                            headers: {
+                                ...headerData,
+                                'content-type': 'application/json',
+                                host,
+                                'content-length': body.length.toString(),
+                                connection: 'close',
+                            },
+                            method: 'POST',
+                            url,
+                            body,
+                        })
+                    );
+                    resolve();
+                }
+            );
+            webHooks.trigger(name, data, headerData);
+        });
     });
 });
