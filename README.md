@@ -7,8 +7,8 @@ Easy-to-use, object oriented WebHooks library written in TypeScript.
 [![codecov](https://codecov.io/gh/bmiddha/webhooks/branch/master/graph/badge.svg)](https://codecov.io/gh/bmiddha/webhooks)
 [![dependencies Status](https://david-dm.org/bmiddha/webhooks/status.svg)](https://david-dm.org/bmiddha/webhooks)
 [![devDependencies Status](https://david-dm.org/bmiddha/webhooks/dev-status.svg)](https://david-dm.org/bmiddha/webhooks?type=dev)
-[![bundlephobia](https://badgen.net/bundlephobia/min/@bmiddha/webhooks)](https://bundlephobia.com/result?p=@bmiddha/webhooks@0.2.1)
-[![bundlephobia](https://badgen.net/bundlephobia/minzip/@bmiddha/webhooks)](https://bundlephobia.com/result?p=@bmiddha/webhooks@0.2.1)
+[![bundlephobia](https://badgen.net/bundlephobia/min/@bmiddha/webhooks)](https://bundlephobia.com/result?p=@bmiddha/webhooks)
+[![bundlephobia](https://badgen.net/bundlephobia/minzip/@bmiddha/webhooks)](https://bundlephobia.com/result?p=@bmiddha/webhooks)
 [![license](https://img.shields.io/github/license/bmiddha/webhooks)](https://github.com/bmiddha/webhooks/blob/master/LICENSE)
 
 [![NPM](https://nodei.co/npm/@bmiddha/webhooks.png?downloads=true&downloadRank=true&stars=true)](https://nodei.co/npm/@bmiddha/webhooks/)
