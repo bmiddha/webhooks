@@ -5,6 +5,6 @@ coverage/*
 # data definition files
 **/*.d.ts
 # 3rd party libs
-/src/public/
+/lib/public/
 # custom definition files
-/src/types/
+/lib/types/

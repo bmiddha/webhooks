@@ -1,0 +1,19 @@
+coverage:
+  status:
+    project:
+      default:
+        target: 80%
+        threshold: 5%
+        informational: true
+        if_not_found: success
+    patch:
+      default:
+        # basic
+        target: 80%
+        threshold: 5%
+        base: auto 
+        branches: 
+          - master
+        if_not_found: success
+        only_pulls: false
+  
