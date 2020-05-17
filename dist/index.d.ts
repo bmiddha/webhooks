@@ -1,26 +1,30 @@
 /// <reference types="node" />
-import { Redis } from 'ioredis';
 import { EventEmitter } from 'events';
-declare type Options = {
-    redisClient?: Redis;
+import { Connection } from 'mongoose';
+import { Redis } from 'ioredis';
+import { HashTable } from './db/memory';
+export declare type Hook = {
+    key: string;
+    urls: string[];
 };
-interface DB {
-    [key: string]: string[];
-}
-interface HashTable<T> {
-    [key: string]: T;
-}
 declare type RequestFunction = (name: string, jsonData: {}, headersData?: {}) => Promise<void>;
+export declare class DatabaseError extends Error {
+    constructor(message: string);
+}
+declare type Options = {
+    mongooseConnection?: Connection;
+    redisClient?: Redis;
+    memoryDB?: HashTable<string[]>;
+};
 export declare class WebHooks {
     #private;
-    constructor({ redisClient }: Options);
+    constructor(options: Options);
     /**
      * @param  {string} name
      * @param  {Object} jsonData
      * @param  {Object} headersData?
-     * @returns boolean
      */
-    trigger: (name: string, jsonData: {}, headersData?: {}) => boolean;
+    trigger: (name: string, jsonData: {}, headersData?: {}) => void;
     /**
      * Add WebHook to name.
      *
@@ -40,20 +44,14 @@ export declare class WebHooks {
      *
      * @returns Promise
      */
-    getDB: () => Promise<DB>;
+    getDB: () => Promise<Hook[]>;
     /**
      * Return array of URLs for specified name.
      *
      * @param  {string} name
      * @returns Promise
      */
-    getWebHook: (name: string) => Promise<string>;
-    /**
-     * Return array of URLs for specified name.
-     *
-     * @param  {string} name
-     * @returns Promise
-     */
+    getWebHook: (name: string) => Promise<string[]>;
     /**
      * Return all request functions hash table
      *

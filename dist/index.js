@@ -1,4 +1,3 @@
-"use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -21,62 +20,55 @@ var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (
     }
     return privateMap.get(receiver);
 };
-var _redisClient, _emitter, _requestFunctions, _setListeners, _getRequestFunction, _removeUrlFromName, _removeName;
-Object.defineProperty(exports, "__esModule", { value: true });
-const request = require("request-promise-native");
-const crypto = require("crypto");
-const events_1 = require("events");
-class WebHooks {
-    constructor({ redisClient }) {
-        _redisClient.set(this, void 0);
+var _db, _emitter, _requestFunctions, _setListeners, _getRequestFunction;
+import * as crypto from 'crypto';
+import fetch from 'node-fetch';
+import { EventEmitter } from 'events';
+import { MongoDB } from './db/mongo';
+import { RedisDB } from './db/redis';
+import { MemoryDB } from './db/memory';
+export class DatabaseError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'Database Error';
+    }
+}
+export class WebHooks {
+    constructor(options) {
+        _db.set(this, void 0);
         _emitter.set(this, void 0);
         _requestFunctions.set(this, void 0);
         _setListeners.set(this, () => __awaiter(this, void 0, void 0, function* () {
-            const keys = yield __classPrivateFieldGet(this, _redisClient).keys('*');
-            keys.map((key) => __awaiter(this, void 0, void 0, function* () {
-                const urls = JSON.parse(yield __classPrivateFieldGet(this, _redisClient).get(key));
-                urls.forEach(url => {
+            const hooks = yield __classPrivateFieldGet(this, _db).getDB();
+            hooks.forEach((hook) => __awaiter(this, void 0, void 0, function* () {
+                hook.urls.forEach(url => {
                     const encUrl = crypto.createHash('md5').update(url).digest('hex');
                     __classPrivateFieldGet(this, _requestFunctions)[encUrl] = __classPrivateFieldGet(this, _getRequestFunction).call(this, url);
-                    __classPrivateFieldGet(this, _emitter).on(key, __classPrivateFieldGet(this, _requestFunctions)[encUrl]);
+                    __classPrivateFieldGet(this, _emitter).on(hook.key, __classPrivateFieldGet(this, _requestFunctions)[encUrl]);
                 });
             }));
+            __classPrivateFieldGet(this, _emitter).emit('setListeners');
         }));
         _getRequestFunction.set(this, (url) => {
             return (name, jsonData, headersData) => __awaiter(this, void 0, void 0, function* () {
-                /* istanbul ignore next */
-                const { statusCode, body } = yield request({
+                const res = yield fetch(url, {
                     method: 'POST',
-                    uri: url,
-                    strictSSL: false,
-                    headers: Object.assign(Object.assign({}, headersData), { 'Content-Type': 'application/json' }),
                     body: JSON.stringify(jsonData),
-                    resolveWithFullResponse: true,
+                    headers: Object.assign(Object.assign({}, headersData), { 'Content-Type': 'application/json' }),
                 });
-                /* istanbul ignore next */
-                __classPrivateFieldGet(this, _emitter).emit(`${name}.status`, name, statusCode, body);
+                const { status } = res;
+                const body = yield res.text();
+                __classPrivateFieldGet(this, _emitter).emit(`${name}.status`, name, status, body);
             });
         });
-        _removeUrlFromName.set(this, (name, url) => __awaiter(this, void 0, void 0, function* () {
-            const urls = JSON.parse(yield __classPrivateFieldGet(this, _redisClient).get(name));
-            if (urls.indexOf(url) !== -1) {
-                urls.splice(urls.indexOf(url), 1);
-                yield __classPrivateFieldGet(this, _redisClient).set(name, JSON.stringify(urls));
-            }
-            else {
-                throw new Error(`URL(${url}) not found wile removing from Name(${name}).`);
-            }
-        }));
-        _removeName.set(this, (name) => __awaiter(this, void 0, void 0, function* () {
-            yield __classPrivateFieldGet(this, _redisClient).unlink(name);
-        }));
         /**
          * @param  {string} name
          * @param  {Object} jsonData
          * @param  {Object} headersData?
-         * @returns boolean
          */
-        this.trigger = (name, jsonData, headersData) => __classPrivateFieldGet(this, _emitter).emit(name, name, jsonData, headersData);
+        this.trigger = (name, jsonData, headersData) => {
+            __classPrivateFieldGet(this, _emitter).emit(name, name, jsonData, headersData);
+        };
         /**
          * Add WebHook to name.
          *
@@ -84,19 +76,11 @@ class WebHooks {
          * @param  {string} url
          */
         this.add = (name, url) => __awaiter(this, void 0, void 0, function* () {
-            const urls = (yield __classPrivateFieldGet(this, _redisClient).exists(name))
-                ? JSON.parse(yield __classPrivateFieldGet(this, _redisClient).get(name))
-                : [];
-            if (urls.indexOf(url) === -1) {
-                urls.push(url);
-                const encUrl = crypto.createHash('md5').update(url).digest('hex');
-                __classPrivateFieldGet(this, _requestFunctions)[encUrl] = __classPrivateFieldGet(this, _getRequestFunction).call(this, url);
-                __classPrivateFieldGet(this, _emitter).on(name, __classPrivateFieldGet(this, _requestFunctions)[encUrl]);
-                yield __classPrivateFieldGet(this, _redisClient).set(name, JSON.stringify(urls));
-            }
-            else {
-                throw new Error(`URL(${url}) already exists for name(${name}).`);
-            }
+            if (!(yield __classPrivateFieldGet(this, _db).add(name, url)))
+                throw new DatabaseError(`Cannot add name ${name}, url ${url} to database.`);
+            const encUrl = crypto.createHash('md5').update(url).digest('hex');
+            __classPrivateFieldGet(this, _requestFunctions)[encUrl] = __classPrivateFieldGet(this, _getRequestFunction).call(this, url);
+            __classPrivateFieldGet(this, _emitter).on(name, __classPrivateFieldGet(this, _requestFunctions)[encUrl]);
         });
         /**
          * Remove URL from specified name. If no URL is specified, then remove name from Database.
@@ -105,22 +89,22 @@ class WebHooks {
          * @param  {string} url?
          */
         this.remove = (name, url) => __awaiter(this, void 0, void 0, function* () {
-            if (!(yield __classPrivateFieldGet(this, _redisClient).exists(name)))
-                throw new Error(`Name(${name}) not found while removing.`);
+            const hook = yield __classPrivateFieldGet(this, _db).get(name);
             if (url) {
-                yield __classPrivateFieldGet(this, _removeUrlFromName).call(this, name, url);
+                if (!(yield __classPrivateFieldGet(this, _db).deleteUrl(name, url)))
+                    throw new DatabaseError(`Cannot delete name ${name}, url ${url} from database`);
                 const urlKey = crypto.createHash('md5').update(url).digest('hex');
                 __classPrivateFieldGet(this, _emitter).removeListener(name, __classPrivateFieldGet(this, _requestFunctions)[urlKey]);
                 delete __classPrivateFieldGet(this, _requestFunctions)[urlKey];
             }
             else {
                 __classPrivateFieldGet(this, _emitter).removeAllListeners(name);
-                const urls = JSON.parse(yield __classPrivateFieldGet(this, _redisClient).get(name));
-                urls.forEach(url => {
+                hook.urls.forEach(url => {
                     const urlKey = crypto.createHash('md5').update(url).digest('hex');
                     delete __classPrivateFieldGet(this, _requestFunctions)[urlKey];
                 });
-                yield __classPrivateFieldGet(this, _removeName).call(this, name);
+                if (!(yield __classPrivateFieldGet(this, _db).deleteKey(name)))
+                    throw new DatabaseError(`Cannot delete name ${name} from database`);
             }
         });
         /**
@@ -129,12 +113,7 @@ class WebHooks {
          * @returns Promise
          */
         this.getDB = () => __awaiter(this, void 0, void 0, function* () {
-            const keys = yield __classPrivateFieldGet(this, _redisClient).keys('*');
-            const pairs = yield Promise.all(keys.map((key) => __awaiter(this, void 0, void 0, function* () {
-                const urls = JSON.parse(yield __classPrivateFieldGet(this, _redisClient).get(key));
-                return [key, urls];
-            })));
-            return Object.fromEntries(pairs);
+            return yield __classPrivateFieldGet(this, _db).getDB();
         });
         /**
          * Return array of URLs for specified name.
@@ -143,21 +122,20 @@ class WebHooks {
          * @returns Promise
          */
         this.getWebHook = (name) => __awaiter(this, void 0, void 0, function* () {
-            if (!(yield __classPrivateFieldGet(this, _redisClient).exists(name)))
-                throw new Error(`Name(${name}) not found while getWebHook.`);
-            return yield __classPrivateFieldGet(this, _redisClient).get(name);
+            return (yield __classPrivateFieldGet(this, _db).get(name)).urls;
         });
-        __classPrivateFieldSet(this, _redisClient, redisClient);
-        __classPrivateFieldSet(this, _emitter, new events_1.EventEmitter());
+        if (!!options.mongooseConnection)
+            __classPrivateFieldSet(this, _db, new MongoDB(options.mongooseConnection));
+        else if (!!options.redisClient)
+            __classPrivateFieldSet(this, _db, new RedisDB(options.redisClient));
+        else if (!!options.memoryDB)
+            __classPrivateFieldSet(this, _db, new MemoryDB(options.memoryDB));
+        else
+            throw new DatabaseError('No database specified.');
+        __classPrivateFieldSet(this, _emitter, new EventEmitter());
         __classPrivateFieldSet(this, _requestFunctions, {});
         __classPrivateFieldGet(this, _setListeners).call(this);
     }
-    /**
-     * Return array of URLs for specified name.
-     *
-     * @param  {string} name
-     * @returns Promise
-     */
     /**
      * Return all request functions hash table
      *
@@ -175,7 +153,5 @@ class WebHooks {
         return __classPrivateFieldGet(this, _emitter);
     }
 }
-exports.WebHooks = WebHooks;
-_redisClient = new WeakMap(), _emitter = new WeakMap(), _requestFunctions = new WeakMap(), _setListeners = new WeakMap(), _getRequestFunction = new WeakMap(), _removeUrlFromName = new WeakMap(), _removeName = new WeakMap();
-exports.default = WebHooks;
-//# sourceMappingURL=index.js.map
+_db = new WeakMap(), _emitter = new WeakMap(), _requestFunctions = new WeakMap(), _setListeners = new WeakMap(), _getRequestFunction = new WeakMap();
+export default WebHooks;

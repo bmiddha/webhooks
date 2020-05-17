@@ -2,18 +2,13 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"name": "Node Inspector",
-			"type": "node",
-			"request": "launch",
-			"args": ["${workspaceRoot}/src/Example.ts"],
-			"runtimeArgs": ["-r", "ts-node/register"],
-			"cwd": "${workspaceRoot}",
-			"protocol": "inspector",
-			"internalConsoleOptions": "openOnSessionStart",
-			"runtimeExecutable": "/usr/local/bin/node",
-			"env": {
-				"TS_NODE_IGNORE": "false"
-			}
+			"name": "Attach",
+			"port": 9229,
+			"request": "attach",
+			"skipFiles": [
+				"<node_internals>/**"
+			],
+			"type": "node"
 		}
 	]
 }

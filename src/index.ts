@@ -1,76 +1,76 @@
-import * as request from 'request-promise-native';
 import * as crypto from 'crypto';
-import { Redis } from 'ioredis';
+import fetch from 'node-fetch';
 import { EventEmitter } from 'events';
 
-type Options = {
-    redisClient?: Redis;
+import { Connection } from 'mongoose';
+import { Redis } from 'ioredis';
+
+import { DB } from './db/db';
+import { MongoDB } from './db/mongo';
+import { RedisDB } from './db/redis';
+import { MemoryDB, HashTable } from './db/memory';
+
+export type Hook = {
+    key: string;
+    urls: string[];
 };
-
-interface DB {
-    [key: string]: string[];
-}
-
-interface HashTable<T> {
-    [key: string]: T;
-}
 
 type RequestFunction = (name: string, jsonData: {}, headersData?: {}) => Promise<void>;
 
+export class DatabaseError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'Database Error';
+    }
+}
+
+type Options = {
+    mongooseConnection?: Connection;
+    redisClient?: Redis;
+    memoryDB?: HashTable<string[]>;
+};
+
 export class WebHooks {
-    #redisClient: Redis;
+    #db: DB;
     #emitter: EventEmitter;
     #requestFunctions: HashTable<RequestFunction>;
-    constructor({ redisClient }: Options) {
-        this.#redisClient = redisClient;
+    constructor(options: Options) {
+        if (!!options.mongooseConnection) this.#db = new MongoDB(options.mongooseConnection);
+        else if (!!options.redisClient) this.#db = new RedisDB(options.redisClient);
+        else if (!!options.memoryDB) this.#db = new MemoryDB(options.memoryDB);
+        else throw new DatabaseError('No database specified.');
+
         this.#emitter = new EventEmitter();
         this.#requestFunctions = {};
         this.#setListeners();
     }
 
     #setListeners = async () => {
-        const keys = await this.#redisClient.keys('*');
-        keys.map(async (key: string) => {
-            const urls: string[] = JSON.parse(await this.#redisClient.get(key));
-            urls.forEach(url => {
+        const hooks = await this.#db.getDB();
+        hooks.forEach(async (hook: Hook) => {
+            hook.urls.forEach(url => {
                 const encUrl = crypto.createHash('md5').update(url).digest('hex');
                 this.#requestFunctions[encUrl] = this.#getRequestFunction(url);
-                this.#emitter.on(key, this.#requestFunctions[encUrl]);
+                this.#emitter.on(hook.key, this.#requestFunctions[encUrl]);
             });
         });
+        this.#emitter.emit('setListeners');
     };
 
     #getRequestFunction = (url: string): RequestFunction => {
         return async (name: string, jsonData: {}, headersData?: {}): Promise<void> => {
-            /* istanbul ignore next */
-            const { statusCode, body } = await request({
+            const res = await fetch(url, {
                 method: 'POST',
-                uri: url,
-                strictSSL: false,
+                body: JSON.stringify(jsonData),
                 headers: {
                     ...headersData,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(jsonData),
-                resolveWithFullResponse: true,
             });
-            /* istanbul ignore next */
-            this.#emitter.emit(`${name}.status`, name, statusCode, body);
+            const { status } = res;
+            const body = await res.text();
+            this.#emitter.emit(`${name}.status`, name, status, body);
         };
-    };
-
-    #removeUrlFromName = async (name: string, url: string): Promise<void> => {
-        const urls: string[] = JSON.parse(await this.#redisClient.get(name));
-        if (urls.indexOf(url) !== -1) {
-            urls.splice(urls.indexOf(url), 1);
-            await this.#redisClient.set(name, JSON.stringify(urls));
-        } else {
-            throw new Error(`URL(${url}) not found wile removing from Name(${name}).`);
-        }
-    };
-
-    #removeName = async (name: string): Promise<void> => {
-        await this.#redisClient.unlink(name);
     };
 
     /**
@@ -80,7 +80,7 @@ export class WebHooks {
      */
     trigger = (name: string, jsonData: {}, headersData?: {}) => {
         this.#emitter.emit(name, name, jsonData, headersData);
-    }
+    };
 
     /**
      * Add WebHook to name.
@@ -89,18 +89,11 @@ export class WebHooks {
      * @param  {string} url
      */
     add = async (name: string, url: string): Promise<void> => {
-        const urls = (await this.#redisClient.exists(name))
-            ? JSON.parse(await this.#redisClient.get(name))
-            : [];
-        if (urls.indexOf(url) === -1) {
-            urls.push(url);
-            const encUrl = crypto.createHash('md5').update(url).digest('hex');
-            this.#requestFunctions[encUrl] = this.#getRequestFunction(url);
-            this.#emitter.on(name, this.#requestFunctions[encUrl]);
-            await this.#redisClient.set(name, JSON.stringify(urls));
-        } else {
-            throw new Error(`URL(${url}) already exists for name(${name}).`);
-        }
+        if (!(await this.#db.add(name, url)))
+            throw new DatabaseError(`Cannot add name ${name}, url ${url} to database.`);
+        const encUrl = crypto.createHash('md5').update(url).digest('hex');
+        this.#requestFunctions[encUrl] = this.#getRequestFunction(url);
+        this.#emitter.on(name, this.#requestFunctions[encUrl]);
     };
 
     /**
@@ -110,21 +103,21 @@ export class WebHooks {
      * @param  {string} url?
      */
     remove = async (name: string, url?: string): Promise<void> => {
-        if (!(await this.#redisClient.exists(name)))
-            throw new Error(`Name(${name}) not found while removing.`);
+        const hook = await this.#db.get(name);
         if (url) {
-            await this.#removeUrlFromName(name, url);
+            if (!(await this.#db.deleteUrl(name, url)))
+                throw new DatabaseError(`Cannot delete name ${name}, url ${url} from database`);
             const urlKey = crypto.createHash('md5').update(url).digest('hex');
             this.#emitter.removeListener(name, this.#requestFunctions[urlKey]);
             delete this.#requestFunctions[urlKey];
         } else {
             this.#emitter.removeAllListeners(name);
-            const urls: string[] = JSON.parse(await this.#redisClient.get(name));
-            urls.forEach(url => {
+            hook.urls.forEach(url => {
                 const urlKey = crypto.createHash('md5').update(url).digest('hex');
                 delete this.#requestFunctions[urlKey];
             });
-            await this.#removeName(name);
+            if (!(await this.#db.deleteKey(name)))
+                throw new DatabaseError(`Cannot delete name ${name} from database`);
         }
     };
 
@@ -133,15 +126,8 @@ export class WebHooks {
      *
      * @returns Promise
      */
-    getDB = async (): Promise<DB> => {
-        const keys = await this.#redisClient.keys('*');
-        const pairs = await Promise.all(
-            keys.map(async (key: string) => {
-                const urls = JSON.parse(await this.#redisClient.get(key));
-                return [key, urls];
-            }),
-        );
-        return Object.fromEntries(pairs);
+    getDB = async () => {
+        return await this.#db.getDB();
     };
 
     /**
@@ -150,18 +136,9 @@ export class WebHooks {
      * @param  {string} name
      * @returns Promise
      */
-    getWebHook = async (name: string): Promise<string> => {
-        if (!(await this.#redisClient.exists(name)))
-            throw new Error(`Name(${name}) not found while getWebHook.`);
-        return await this.#redisClient.get(name);
+    getWebHook = async (name: string): Promise<string[]> => {
+        return (await this.#db.get(name)).urls;
     };
-
-    /**
-     * Return array of URLs for specified name.
-     *
-     * @param  {string} name
-     * @returns Promise
-     */
 
     /**
      * Return all request functions hash table
