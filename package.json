@@ -1,6 +1,6 @@
 {
   "name": "@bmiddha/webhooks",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "Easy-to-use, object oriented WebHooks library written in TypeScript.",
   "keywords": [
     "typescript",
