@@ -1,7 +1,5 @@
 node_modules
 dist/*
-!dist/index.d.ts
-!dist/index.js
 coverage
 .nyc_output
 .DS_Store
