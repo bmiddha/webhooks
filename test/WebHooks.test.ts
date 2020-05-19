@@ -1,10 +1,10 @@
 import { WebHooks } from '../src';
-import * as chai from 'chai';
-import * as http from 'http';
-import * as mongoose from 'mongoose';
+import chai from 'chai';
+import http from 'http';
+import mongoose from 'mongoose';
 import { HookDocument, HookSchema } from '../src/db/mongo';
 import { MongoMemoryServer } from 'mongodb-memory-server';
-import { Redis } from 'ioredis';
+import Redis from 'ioredis';
 const ioredisMock = require('ioredis-mock');
 
 const { assert } = chai;
@@ -226,7 +226,7 @@ describe('MemoryDB Tests', () => {
 
 describe('Redis Tests', () => {
     let wh: WebHooks;
-    let redisClient: Redis;
+    let redisClient: Redis.Redis;
 
     beforeEach(async () => {
         redisClient = new ioredisMock();
@@ -271,9 +271,7 @@ describe('MongoDB Tests', () => {
                 useUnifiedTopology: true,
                 useFindAndModify: false,
             });
-            console.log('Mongoose connected');
         } catch (e) {
-            console.error('Mongoose Error');
             mongoose.disconnect();
             process.exit(1);
         }

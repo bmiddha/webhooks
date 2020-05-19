@@ -31,33 +31,34 @@ type Options = {
 };
 
 export class WebHooks {
-    #db: DB;
-    #emitter: EventEmitter;
-    #requestFunctions: HashTable<RequestFunction>;
+    db: DB;
+    emitter: EventEmitter;
+    requestFunctions: HashTable<RequestFunction>;
+
     constructor(options: Options) {
-        if (!!options.mongooseConnection) this.#db = new MongoDB(options.mongooseConnection);
-        else if (!!options.redisClient) this.#db = new RedisDB(options.redisClient);
-        else if (!!options.memoryDB) this.#db = new MemoryDB(options.memoryDB);
+        if (!!options.mongooseConnection) this.db = new MongoDB(options.mongooseConnection);
+        else if (!!options.redisClient) this.db = new RedisDB(options.redisClient);
+        else if (!!options.memoryDB) this.db = new MemoryDB(options.memoryDB);
         else throw new DatabaseError('No database specified.');
 
-        this.#emitter = new EventEmitter();
-        this.#requestFunctions = {};
-        this.#setListeners();
+        this.emitter = new EventEmitter();
+        this.requestFunctions = {};
+        this.setListeners();
     }
 
-    #setListeners = async () => {
-        const hooks = await this.#db.getDB();
+    setListeners = async () => {
+        const hooks = await this.db.getDB();
         hooks.forEach(async (hook: Hook) => {
             hook.urls.forEach(url => {
                 const encUrl = crypto.createHash('md5').update(url).digest('hex');
-                this.#requestFunctions[encUrl] = this.#getRequestFunction(url);
-                this.#emitter.on(hook.key, this.#requestFunctions[encUrl]);
+                this.requestFunctions[encUrl] = this.getRequestFunction(url);
+                this.emitter.on(hook.key, this.requestFunctions[encUrl]);
             });
         });
-        this.#emitter.emit('setListeners');
+        this.emitter.emit('setListeners');
     };
 
-    #getRequestFunction = (url: string): RequestFunction => {
+    getRequestFunction = (url: string): RequestFunction => {
         return async (name: string, jsonData: {}, headersData?: {}): Promise<void> => {
             const res = await fetch(url, {
                 method: 'POST',
@@ -69,7 +70,7 @@ export class WebHooks {
             });
             const { status } = res;
             const body = await res.text();
-            this.#emitter.emit(`${name}.status`, name, status, body);
+            this.emitter.emit(`${name}.status`, name, status, body);
         };
     };
 
@@ -79,7 +80,7 @@ export class WebHooks {
      * @param  {Object} headersData?
      */
     trigger = (name: string, jsonData: {}, headersData?: {}) => {
-        this.#emitter.emit(name, name, jsonData, headersData);
+        this.emitter.emit(name, name, jsonData, headersData);
     };
 
     /**
@@ -89,11 +90,11 @@ export class WebHooks {
      * @param  {string} url
      */
     add = async (name: string, url: string): Promise<void> => {
-        if (!(await this.#db.add(name, url)))
+        if (!(await this.db.add(name, url)))
             throw new DatabaseError(`Cannot add name ${name}, url ${url} to database.`);
         const encUrl = crypto.createHash('md5').update(url).digest('hex');
-        this.#requestFunctions[encUrl] = this.#getRequestFunction(url);
-        this.#emitter.on(name, this.#requestFunctions[encUrl]);
+        this.requestFunctions[encUrl] = this.getRequestFunction(url);
+        this.emitter.on(name, this.requestFunctions[encUrl]);
     };
 
     /**
@@ -103,20 +104,20 @@ export class WebHooks {
      * @param  {string} url?
      */
     remove = async (name: string, url?: string): Promise<void> => {
-        const hook = await this.#db.get(name);
+        const hook = await this.db.get(name);
         if (url) {
-            if (!(await this.#db.deleteUrl(name, url)))
+            if (!(await this.db.deleteUrl(name, url)))
                 throw new DatabaseError(`Cannot delete name ${name}, url ${url} from database`);
             const urlKey = crypto.createHash('md5').update(url).digest('hex');
-            this.#emitter.removeListener(name, this.#requestFunctions[urlKey]);
-            delete this.#requestFunctions[urlKey];
+            this.emitter.removeListener(name, this.requestFunctions[urlKey]);
+            delete this.requestFunctions[urlKey];
         } else {
-            this.#emitter.removeAllListeners(name);
+            this.emitter.removeAllListeners(name);
             hook.urls.forEach(url => {
                 const urlKey = crypto.createHash('md5').update(url).digest('hex');
-                delete this.#requestFunctions[urlKey];
+                delete this.requestFunctions[urlKey];
             });
-            if (!(await this.#db.deleteKey(name)))
+            if (!(await this.db.deleteKey(name)))
                 throw new DatabaseError(`Cannot delete name ${name} from database`);
         }
     };
@@ -127,7 +128,7 @@ export class WebHooks {
      * @returns Promise
      */
     getDB = async () => {
-        return await this.#db.getDB();
+        return await this.db.getDB();
     };
 
     /**
@@ -137,26 +138,6 @@ export class WebHooks {
      * @returns Promise
      */
     getWebHook = async (name: string): Promise<string[]> => {
-        return (await this.#db.get(name)).urls;
+        return (await this.db.get(name)).urls;
     };
-
-    /**
-     * Return all request functions hash table
-     *
-     * @returns HashTable
-     */
-    get requestFunctions(): HashTable<RequestFunction> {
-        return this.#requestFunctions;
-    }
-
-    /**
-     * Return EventEmitter instance.
-     *
-     * @returns EventEmitter
-     */
-    get emitter(): EventEmitter {
-        return this.#emitter;
-    }
 }
-
-export default WebHooks;

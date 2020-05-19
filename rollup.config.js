@@ -8,7 +8,12 @@ export default {
         file: 'dist/index.js',
         format: 'cjs',
     },
-    external: [...Object.keys(pkg.dependencies || {}), ...Object.keys(pkg.peerDependencies || {})],
+    external: [
+        'crypto',
+        'events',
+        ...Object.keys(pkg.dependencies || {}),
+        ...Object.keys(pkg.peerDependencies || {}),
+    ],
     plugins: [
         typescript({
             typescript: require('typescript'),

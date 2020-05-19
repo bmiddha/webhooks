@@ -1,9 +1,10 @@
 {
     "compilerOptions": {
-        "module": "es6",
+        "module": "esnext",
         "allowSyntheticDefaultImports": true,
         "target": "es2019",
         "noImplicitAny": true,
+        "esModuleInterop": true,
         "moduleResolution": "node",
         "lib": [
             "es2019"

@@ -86,11 +86,11 @@ All names, and URLs.
 | ----------- | -------- | -------- |
 | `name`      | `string` | `true`   |
 
-### `requestFunctions()` - Get Request Functions
+### `requestFunctions` - (name: string, jsonData: {}, headersData?: {}) => Promise<void>[]
 
 #### Return: `(name: string, jsonData: {}, headersData?: {}) => Promise<void>[]`
 
-### `emitter()` - Get Event Emitter
+### `emitter` - Get Event Emitter
 
 #### Return: `events.EventEmitter`
 
