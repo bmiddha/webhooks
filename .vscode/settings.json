@@ -1,0 +1,6 @@
+{
+  "jest.jestCommandLine": "yarn test",
+  "cSpell.words": [
+    "mockingoose"
+  ]
+}

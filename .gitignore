@@ -1,6 +1,5 @@
-node_modules
-dist/*
-coverage
-.nyc_output
+*.log
 .DS_Store
-*.tgz
+node_modules
+dist
+coverage

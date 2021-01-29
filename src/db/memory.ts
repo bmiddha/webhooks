@@ -1,52 +1,49 @@
-import { DB } from './db';
-import { Hook } from '..';
-
-export interface HashTable<T> {
-    [key: string]: T;
-}
+import { DB, Hook, MemoryDBType } from '..';
 
 export class MemoryDB implements DB {
-    db: HashTable<string[]>;
+  db: MemoryDBType;
 
-    constructor(db: HashTable<string[]>) {
-        this.db = db;
-    }
+  constructor(db: MemoryDBType) {
+    this.db = db;
+  }
 
-    async get(key: string): Promise<Hook> {
-        return { key, urls: this.db[key] || [] };
+  async get(key: string): Promise<Hook> {
+    return { key, urls: this.db[key] || [] };
+  }
+  async getDB(): Promise<Hook[]> {
+    const keys = Object.keys(this.db);
+    const hooks = keys.map((key: string) => {
+      const urls = this.db[key];
+      return { key, urls };
+    });
+    return hooks;
+  }
+  async deleteKey(key: string): Promise<boolean> {
+    if (!!this.db[key]) {
+      delete this.db[key];
+      return true;
     }
-    async getDB(): Promise<Hook[]> {
-        const keys = Object.keys(this.db);
-        const hooks = keys.map((key: string) => {
-            const urls = this.db[key];
-            return { key, urls };
-        });
-        return hooks;
+    return false;
+  }
+  async deleteUrl(key: string, url: string): Promise<boolean> {
+    if (!this.db[key]) return false;
+    const index = this.db[key].indexOf(url);
+    if (index !== -1) {
+      this.db[key].splice(index, 1);
+      return true;
     }
-    async deleteKey(key: string): Promise<boolean> {
-        if (!!this.db[key]) {
-            delete this.db[key];
-            return true;
-        }
-        return false;
+    return false;
+  }
+  async add(key: string, url: string): Promise<boolean> {
+    if (!this.db[key]) {
+      this.db[key] = [];
     }
-    async deleteUrl(key: string, url: string): Promise<boolean> {
-        if (!this.db[key]) return false;
-        const index = this.db[key].indexOf(url);
-        if (index !== -1) {
-            this.db[key].splice(index, 1);
-            return true;
-        }
-        return false;
+    if (this.db[key].indexOf(url) === -1) {
+      this.db[key].push(url);
+      return true;
     }
-    async add(key: string, url: string): Promise<boolean> {
-        if (!this.db[key]) {
-            this.db[key] = [];
-        }
-        if (this.db[key].indexOf(url) === -1) {
-            this.db[key].push(url);
-            return true;
-        }
-        return false;
-    }
+    return false;
+  }
 }
+
+export default MemoryDB;

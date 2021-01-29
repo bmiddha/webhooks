@@ -1,7 +1,0 @@
-*
-!package.json
-!package-lock.json
-!dist/index.js
-!dist/**/*.d.ts
-!README.md
-!LICENSE
