@@ -11,3 +11,5 @@ Easy-to-use, object oriented WebHooks library written in TypeScript.
 [![license](https://img.shields.io/github/license/bmiddha/webhooks)](https://github.com/bmiddha/webhooks/blob/main/LICENSE)
 
 [![NPM](https://nodei.co/npm/@bmiddha/webhooks.png?downloads=true&downloadRank=true&stars=true)](https://nodei.co/npm/@bmiddha/webhooks/)
+
+## [Docs](https://bmiddha.github.io/webhooks/)
