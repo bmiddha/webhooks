@@ -5,7 +5,7 @@
     "url": "https://bmiddha.com",
     "email": "5100938+bmiddha@users.noreply.github.com"
   },
-  "version": "0.0.0",
+  "version": "2.0.1",
   "description": "Easy-to-use, WebHooks library written in TypeScript.",
   "keywords": [
     "typescript",
