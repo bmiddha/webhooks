@@ -19,6 +19,7 @@
     "src"
   ],
   "scripts": {
+    "prepublish": "yarn build",
     "build": "tsdx build",
     "husky": "husky install",
     "lint": "tsdx lint",
