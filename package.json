@@ -1,6 +1,6 @@
 {
   "name": "@bmiddha/webhooks",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Easy-to-use, WebHooks library written in TypeScript.",
   "license": "MIT",
   "author": "Bharat Middha <5100938+bmiddha@users.noreply.github.com> (https://bmiddha.com)",
